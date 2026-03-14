@@ -112,9 +112,9 @@ const LANGUAGES = {
 
 // --- State Management ---
 const DEFAULT_USERS = [
-  { id: '1', name: 'Admin HOD', email: 'hod@example.com', password: 'password', role: 'HOD', department: 'Computer Science' },
-  { id: '2', name: 'John Teacher', email: 'teacher@example.com', password: 'password', role: 'Teacher', department: 'Computer Science' },
-  { id: '3', name: 'Alice Student', email: 'student@example.com', password: 'password', role: 'Student', prn: '101', department: 'Computer Science' }
+  { id: '1', name: 'Admin HOD', email: 'hod@gmail.com', password: '123', role: 'HOD', department: 'Computer Science' },
+  { id: '2', name: 'John Teacher', email: 'teacher@gmail.com', password: '123', role: 'Teacher', department: 'Computer Science' },
+  { id: '3', name: 'Alice Student', email: 'student@gmail.com', password: '123', role: 'Student', prn: '100', department: 'Computer Science' }
 ];
 
 const DEFAULT_COMPLAINTS = [];
