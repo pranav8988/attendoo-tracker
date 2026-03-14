@@ -45,7 +45,15 @@ const LANGUAGES = {
     noComplaints: 'No complaints yet.',
     studentDashboard: 'Student Dashboard',
     teacherDashboard: 'Teacher Dashboard',
-    hodDashboard: 'HOD Dashboard'
+    hodDashboard: 'HOD Dashboard',
+    studyMaterial: 'Study Material',
+    handnotes: 'Handnotes',
+    syllabus: 'Syllabus',
+    pyqs: 'PYQs',
+    upload: 'Upload',
+    title: 'Title',
+    link: 'Link URL (Google Drive, PDF, etc.)',
+    materials: 'Materials'
   },
   mr: {
     login: 'लॉगिन',
@@ -90,7 +98,15 @@ const LANGUAGES = {
     noComplaints: 'अद्याप तक्रारी नाहीत.',
     studentDashboard: 'विद्यार्थी डॅशबोर्ड',
     teacherDashboard: 'शिक्षक डॅशबोर्ड',
-    hodDashboard: 'विभाग प्रमुख डॅशबोर्ड'
+    hodDashboard: 'विभाग प्रमुख डॅशबोर्ड',
+    studyMaterial: 'अभ्यास साहित्य',
+    handnotes: 'हस्तलिखित नोट्स',
+    syllabus: 'अभ्यासक्रम',
+    pyqs: 'मागील वर्षाचे प्रश्न',
+    upload: 'अपलोड करा',
+    title: 'शीर्षक',
+    link: 'लिंक URL (गुगल ड्राईव्ह, पीडीएफ)',
+    materials: 'साहित्य'
   }
 };
 
@@ -118,6 +134,7 @@ let state = {
   attendance: JSON.parse(localStorage.getItem('attendoo_attendance')) || [],
   complaints: JSON.parse(localStorage.getItem('attendoo_complaints')) || [],
   notices: JSON.parse(localStorage.getItem('attendoo_notices')) || [],
+  materials: JSON.parse(localStorage.getItem('attendoo_materials')) || [],
   lang: 'en',
   isDarkMode: true,
   isRegistering: false,
@@ -180,6 +197,7 @@ function saveState() {
   localStorage.setItem('attendoo_attendance', JSON.stringify(state.attendance));
   localStorage.setItem('attendoo_complaints', JSON.stringify(state.complaints));
   localStorage.setItem('attendoo_notices', JSON.stringify(state.notices));
+  localStorage.setItem('attendoo_materials', JSON.stringify(state.materials));
   localStorage.setItem('attendoo_current_user', JSON.stringify(state.currentUser));
 }
 
@@ -224,6 +242,8 @@ function handleLogin(e) {
     const user = state.users.find(u => u.email === email && u.password === password && u.role === role);
 
     if (user) {
+      user.lastLogin = new Date().toLocaleDateString();
+      user.lastLoginTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       state.currentUser = user;
       saveState();
       render();
@@ -867,8 +887,26 @@ function renderStudentDashboard(container, t) {
           </div>
         </div>
       </div>
+
+      <div class="glass-card p-8 sm:p-10 flex flex-col sm:flex-row items-center justify-between cursor-pointer hover:bg-white/5 transition-all group mt-6 border-indigo-500/20 hover:border-indigo-500/40 shadow-lg shadow-indigo-500/10" id="student-material-btn">
+        <div class="flex items-center gap-6 mb-6 sm:mb-0 w-full sm:w-auto">
+          <div class="w-20 h-20 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform flex-shrink-0">
+            <i data-lucide="book-open" size="40"></i>
+          </div>
+          <div>
+            <h3 class="font-black text-2xl sm:text-3xl text-white tracking-tight mb-2">${t.studyMaterial || 'Study Material'}</h3>
+            <p class="text-sm text-slate-400 font-medium">Access handnotes, syllabus, and PYQs</p>
+          </div>
+        </div>
+        <div class="w-full sm:w-auto bg-indigo-600 text-white px-8 py-4 rounded-xl font-bold flex items-center justify-center gap-2 group-hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-500/20">
+          Browse <i data-lucide="chevron-right"></i>
+        </div>
+      </div>
     </div>
   `;
+
+  const materialBtn = document.getElementById('student-material-btn');
+  if (materialBtn) materialBtn.onclick = () => openStudyMaterialModal();
 }
 
 function renderTeacherDashboard(container, t) {
@@ -891,12 +929,15 @@ function renderTeacherDashboard(container, t) {
         <div class="md:col-span-2 glass-card p-6 flex items-center justify-between gap-4">
           <div class="flex-1">
             <h3 class="font-bold mb-2">Quick Actions</h3>
-            <div class="flex gap-3">
-              <button id="add-student-btn" class="flex-1 bg-rose-600 hover:bg-rose-500 py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all">
-                <i data-lucide="user-plus" size="16"></i> ${t.addStudent}
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <button id="add-student-btn" class="bg-rose-600 hover:bg-rose-500 py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-rose-500/20 text-white">
+                <i data-lucide="user-plus" size="16"></i> <span class="hidden sm:inline">${t.addStudent}</span><span class="sm:hidden">Add</span>
               </button>
-              <button id="export-csv-btn" class="flex-1 bg-white/10 hover:bg-white/20 py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all">
-                <i data-lucide="download" size="16"></i> ${t.exportData}
+              <button id="export-csv-btn" class="bg-white/10 hover:bg-white/20 py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all text-white">
+                <i data-lucide="download" size="16"></i> <span class="hidden sm:inline">${t.exportData}</span><span class="sm:hidden">Export</span>
+              </button>
+              <button id="study-material-btn" class="col-span-2 sm:col-span-1 bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-500/20 text-white">
+                <i data-lucide="book-open" size="16"></i> ${t.materials || 'Materials'}
               </button>
             </div>
           </div>
@@ -1073,6 +1114,9 @@ function renderTeacherDashboard(container, t) {
       document.getElementById('notice-msg').value = '';
     }
   };
+
+  const materialBtn = document.getElementById('study-material-btn');
+  if (materialBtn) materialBtn.onclick = () => openStudyMaterialModal();
 
   lucide.createIcons();
 }
@@ -1381,43 +1425,53 @@ function renderHODDashboard(container, t) {
   const students = state.users.filter(u => u.role === 'Student');
   const today = new Date().toLocaleDateString();
   const totalStudentsCount = students.length;
+  const deptMaterials = state.materials.filter(m => m.department === state.currentUser.department);
   
   // Unique subjects from teachers
   const subjects = [...new Set(teachers.map(t => t.classSubject).filter(Boolean))];
   
   container.innerHTML = `
     <div class="animate-slide-up space-y-8">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <button onclick="viewTeacherDirectory()" class="glass-card p-6 flex items-center gap-6 hover:bg-white/5 transition-all group text-left">
-          <div class="w-16 h-16 bg-rose-500/10 rounded-2xl flex items-center justify-center text-rose-500 group-hover:scale-110 transition-transform">
-            <i data-lucide="users" size="32"></i>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <button onclick="viewTeacherDirectory()" class="glass-card p-6 flex items-center gap-4 hover:bg-white/5 transition-all group text-left">
+          <div class="w-14 h-14 bg-rose-500/10 rounded-2xl flex items-center justify-center text-rose-500 group-hover:scale-110 transition-transform flex-shrink-0">
+            <i data-lucide="users" size="28"></i>
           </div>
           <div>
-            <p class="text-3xl font-bold">${teachers.length}</p>
-            <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">Teachers</p>
+            <p class="text-2xl font-bold">${teachers.length}</p>
+            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Teachers</p>
           </div>
         </button>
-        <button onclick="viewStudentDirectory()" class="glass-card p-6 flex items-center gap-6 hover:bg-white/5 transition-all group text-left">
-          <div class="w-16 h-16 bg-amber-500/10 rounded-2xl flex items-center justify-center text-amber-500 group-hover:scale-110 transition-transform">
-            <i data-lucide="graduation-cap" size="32"></i>
+        <button onclick="viewStudentDirectory()" class="glass-card p-6 flex items-center gap-4 hover:bg-white/5 transition-all group text-left">
+          <div class="w-14 h-14 bg-amber-500/10 rounded-2xl flex items-center justify-center text-amber-500 group-hover:scale-110 transition-transform flex-shrink-0">
+            <i data-lucide="graduation-cap" size="28"></i>
           </div>
           <div>
-            <p class="text-3xl font-bold">${students.length}</p>
-            <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">Students</p>
+            <p class="text-2xl font-bold">${students.length}</p>
+            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Students</p>
           </div>
         </button>
-        <div class="glass-card p-6 flex items-center gap-6">
-          <div class="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-500">
-            <i data-lucide="alert-circle" size="32"></i>
+        <div class="glass-card p-6 flex items-center gap-4">
+          <div class="w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-500 flex-shrink-0">
+            <i data-lucide="alert-circle" size="28"></i>
           </div>
           <div>
-            <p class="text-3xl font-bold">${state.complaints.length}</p>
-            <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">Complaints</p>
+            <p class="text-2xl font-bold">${state.complaints.length}</p>
+            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Complaints</p>
+          </div>
+        </div>
+        <div id="hod-material-btn" class="glass-card p-6 flex items-center gap-4 hover:bg-white/5 transition-all group cursor-pointer text-left">
+          <div class="w-14 h-14 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-500 group-hover:scale-110 transition-transform flex-shrink-0">
+            <i data-lucide="book-open" size="28"></i>
+          </div>
+          <div>
+            <p class="text-2xl font-bold">${deptMaterials.length}</p>
+            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">${t.materials || 'Materials'}</p>
           </div>
         </div>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div class="glass-card p-8">
           <h3 class="text-xl font-bold mb-6 flex items-center gap-3">
             <i data-lucide="shield-alert" class="text-rose-500"></i>
@@ -1461,9 +1515,47 @@ function renderHODDashboard(container, t) {
             }).join('') : `<p class="text-center text-slate-500 py-8 italic">No subjects active today.</p>`}
           </div>
         </div>
+
+        <div class="glass-card p-8">
+          <h3 class="text-xl font-bold mb-6 flex items-center gap-3">
+            <i data-lucide="log-in" class="text-emerald-500"></i>
+            Teacher Logins Today
+          </h3>
+          <div class="space-y-4 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+            ${teachers.length > 0 ? teachers.map(tch => {
+              const loggedInToday = tch.lastLogin === today;
+              return `
+                <div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl ${loggedInToday ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-500/10 text-slate-500'} flex items-center justify-center font-bold">
+                      ${tch.name.charAt(0)}
+                    </div>
+                    <div>
+                      <p class="font-bold text-sm text-white">${tch.name}</p>
+                      <p class="text-[10px] text-slate-400 font-medium">${tch.classSubject || 'No Subject'}</p>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    ${loggedInToday ? `
+                      <span class="text-[10px] font-bold uppercase tracking-widest text-emerald-500">Online</span>
+                      <p class="text-[10px] text-slate-400 mt-1">${tch.lastLoginTime}</p>
+                    ` : `
+                      <span class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Offline</span>
+                    `}
+                  </div>
+                </div>
+              `;
+            }).join('') : `<p class="text-center text-slate-500 py-8 italic">No teachers found.</p>`}
+          </div>
+        </div>
       </div>
     </div>
   `;
+
+  const hodMaterialBtn = document.getElementById('hod-material-btn');
+  if (hodMaterialBtn) hodMaterialBtn.onclick = () => openStudyMaterialModal();
+  
+  lucide.createIcons();
 }
 
 function deleteAttendance(id) {
@@ -1472,6 +1564,132 @@ function deleteAttendance(id) {
   render();
   showToast('Record deleted');
 }
+
+// --- Study Material Logic ---
+window.currentMaterialTab = 'handnotes';
+
+window.openStudyMaterialModal = () => {
+  const t = LANGUAGES[state.lang];
+  window.currentMaterialTab = 'handnotes';
+  
+  const modalHtml = `
+    <div class="space-y-4">
+      <div class="flex gap-2 border-b border-slate-100 pb-2">
+        <button onclick="switchMaterialTab('handnotes')" id="tab-handnotes" class="px-4 py-2 text-sm font-bold rounded-lg transition-all bg-rose-50 text-rose-600">${t.handnotes || 'Handnotes'}</button>
+        <button onclick="switchMaterialTab('syllabus')" id="tab-syllabus" class="px-4 py-2 text-sm font-bold rounded-lg transition-all text-slate-400 hover:bg-slate-50">${t.syllabus || 'Syllabus'}</button>
+        <button onclick="switchMaterialTab('pyqs')" id="tab-pyqs" class="px-4 py-2 text-sm font-bold rounded-lg transition-all text-slate-400 hover:bg-slate-50">${t.pyqs || 'PYQs'}</button>
+      </div>
+      <div id="material-content-container" class="space-y-4"></div>
+    </div>
+  `;
+  
+  openModal(t.studyMaterial || 'Study Material', modalHtml);
+  renderMaterialContent();
+};
+
+window.switchMaterialTab = (tab) => {
+  window.currentMaterialTab = tab;
+  
+  ['handnotes', 'syllabus', 'pyqs'].forEach(type => {
+    const btn = document.getElementById(`tab-${type}`);
+    if(btn) {
+      if (type === tab) {
+        btn.className = 'px-4 py-2 text-sm font-bold rounded-lg transition-all bg-rose-50 text-rose-600';
+      } else {
+        btn.className = 'px-4 py-2 text-sm font-bold rounded-lg transition-all text-slate-400 hover:bg-slate-50';
+      }
+    }
+  });
+  
+  renderMaterialContent();
+};
+
+window.renderMaterialContent = () => {
+  const container = document.getElementById('material-content-container');
+  if (!container) return;
+  
+  const t = LANGUAGES[state.lang];
+  const canUpload = state.currentUser.role === 'Teacher' || state.currentUser.role === 'HOD';
+  const deptMaterials = state.materials.filter(m => 
+    m.type === window.currentMaterialTab && 
+    m.department === state.currentUser.department
+  );
+
+  let html = '';
+  
+  if (canUpload) {
+    html += `
+      <form id="upload-material-form" class="flex flex-col gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100 mb-4 animate-fade-in">
+        <input required type="text" id="mat-title" placeholder="${t.title || 'Title'}" class="w-full bg-white border border-slate-200 rounded-xl py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-900">
+        <input required type="url" id="mat-link" placeholder="${t.link || 'Link URL (e.g., Google Drive)'}" class="w-full bg-white border border-slate-200 rounded-xl py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-900">
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-xl text-sm font-bold transition-all shadow-md shadow-indigo-500/20">
+          ${t.upload || 'Upload'}
+        </button>
+      </form>
+    `;
+  }
+
+  html += `
+    <div class="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+      ${deptMaterials.length > 0 ? deptMaterials.map(m => `
+        <div class="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 hover:border-indigo-200 transition-all group animate-fade-in">
+          <div class="flex items-center gap-3 overflow-hidden">
+            <div class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-500 flex-shrink-0">
+              <i data-lucide="file-text" size="18"></i>
+            </div>
+            <div class="overflow-hidden">
+              <a href="${m.link}" target="_blank" class="font-bold text-sm text-slate-900 hover:text-indigo-600 truncate block">${m.title}</a>
+              <p class="text-[10px] text-slate-400 font-medium">By ${m.authorName} • ${m.date}</p>
+            </div>
+          </div>
+          ${(canUpload && m.authorId === state.currentUser.id) || state.currentUser.role === 'HOD' ? `
+            <button onclick="deleteMaterial('${m.id}')" class="p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-500 rounded-lg transition-colors flex-shrink-0">
+              <i data-lucide="trash-2" size="16"></i>
+            </button>
+          ` : `
+            <a href="${m.link}" target="_blank" class="p-2 text-slate-400 hover:bg-indigo-50 hover:text-indigo-500 rounded-lg transition-colors flex-shrink-0">
+              <i data-lucide="external-link" size="16"></i>
+            </a>
+          `}
+        </div>
+      `).join('') : `<p class="text-center text-slate-400 py-6 italic">No materials found.</p>`}
+    </div>
+  `;
+
+  container.innerHTML = html;
+  lucide.createIcons();
+
+  if (canUpload) {
+    document.getElementById('upload-material-form').onsubmit = (e) => {
+      e.preventDefault();
+      const title = document.getElementById('mat-title').value;
+      const link = document.getElementById('mat-link').value;
+      
+      const newMaterial = {
+        id: Date.now().toString(),
+        type: window.currentMaterialTab,
+        title,
+        link,
+        department: state.currentUser.department,
+        authorId: state.currentUser.id,
+        authorName: state.currentUser.name,
+        date: new Date().toLocaleDateString()
+      };
+      
+      state.materials.unshift(newMaterial);
+      saveState();
+      showToast('Material uploaded successfully');
+      renderMaterialContent();
+    };
+  }
+};
+
+window.deleteMaterial = (id) => {
+  state.materials = state.materials.filter(m => m.id !== id);
+  saveState();
+  showToast('Material deleted');
+  renderMaterialContent();
+};
 
 // --- Initialization ---
 modalClose.onclick = closeModal;
