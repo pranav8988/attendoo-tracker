@@ -13,7 +13,7 @@ const LANGUAGES = {
     fullName: 'Full Name',
     prn: 'Roll No',
     department: 'Department',
-    classSubject: 'Class / Subject',
+    classSubject: 'Subject',
     contact: 'Contact Number',
     address: 'Address',
     forgotPassword: 'Forgot Password?',
@@ -66,7 +66,7 @@ const LANGUAGES = {
     fullName: 'पूर्ण नाव',
     prn: 'रोल नंबर',
     department: 'विभाग',
-    classSubject: 'वर्ग / विषय',
+    classSubject: 'विषय',
     contact: 'संपर्क क्रमांक',
     address: 'पत्ता',
     forgotPassword: 'पासवर्ड विसरलात?',
@@ -111,10 +111,11 @@ const LANGUAGES = {
 };
 
 // --- State Management ---
+
 const DEFAULT_USERS = [
-  { id: '1', name: 'Admin HOD', email: 'hod@example.com', password: 'password', role: 'HOD', department: 'Computer Science' },
-  { id: '2', name: 'John Teacher', email: 'teacher@example.com', password: 'password', role: 'Teacher', department: 'Computer Science' },
-  { id: '3', name: 'Alice Student', email: 'student@example.com', password: 'password', role: 'Student', prn: '101', department: 'Computer Science' }
+  { id: '1', name: 'Admin HOD', email: 'hod@gmail.com', password: '123', role: 'HOD', department: 'Computer Science' },
+  { id: '2', name: 'John Teacher', email: 'teacher@gmail.com', password: '123', role: 'Teacher', department: 'Computer Science', classSubject: 'Electronics' },
+  { id: '3', name: 'Alice Student', email: 'student@gmail.com', password: '123', role: 'Student', prn: '100', department: 'Computer Science' }
 ];
 
 const DEFAULT_COMPLAINTS = [];
@@ -138,7 +139,7 @@ let state = {
   lang: 'en',
   isDarkMode: true,
   isRegistering: false,
-  currentRole: 'Student',
+  currentRole: null,
   showProfile: false,
   currentSubject: 'General',
   currentDivision: 'A',
@@ -510,9 +511,28 @@ function renderLogin() {
 
   const t = LANGUAGES[state.lang];
 
+  document.querySelectorAll('.role-btn').forEach(b => {
+    if (b.dataset.role === state.currentRole) {
+      b.classList.add('bg-rose-600', 'text-white', 'shadow-lg', 'shadow-rose-500/30');
+      b.classList.remove('text-slate-400', 'hover:text-slate-200');
+    } else {
+      b.classList.remove('bg-rose-600', 'text-white', 'shadow-lg', 'shadow-rose-500/30');
+      b.classList.add('text-slate-400', 'hover:text-slate-200');
+    }
+  });
+
   function updateFields() {
     fields.innerHTML = '';
     
+    if (!state.currentRole) {
+      fields.innerHTML = `<p class="text-center text-slate-400 py-8 text-sm animate-pulse">Please select a role above to continue.</p>`;
+      submitBtn.classList.add('hidden');
+      if (forgotBtn) forgotBtn.classList.add('hidden');
+      return;
+    }
+    submitBtn.classList.remove('hidden');
+    if (forgotBtn) forgotBtn.classList.remove('hidden');
+
     if (state.isRegistering) {
       fields.innerHTML += `
         <div class="relative group">
@@ -659,12 +679,15 @@ function renderDashboard() {
       <span class="text-slate-400 font-bold uppercase tracking-widest">${t.classSubject}</span>
       <span class="text-slate-900 font-medium">${user.classSubject}</span>
     </div>` : ''}
-    ${user.role === 'Teacher' ? `
     <div class="pt-2 mt-2 border-t border-slate-100 flex flex-col gap-2">
+       ${user.role === 'Teacher' ? `
        <button id="edit-subject-btn" class="text-[10px] text-rose-500 font-bold uppercase tracking-widest hover:underline text-left">
          ${user.classSubject ? 'Update Subject' : 'Set Subject'}
+       </button>` : ''}
+       <button id="change-password-btn" class="text-[10px] text-rose-500 font-bold uppercase tracking-widest hover:underline text-left">
+         Change Password
        </button>
-    </div>` : ''}
+    </div>
   `;
 
   // Notice Badge
@@ -697,6 +720,32 @@ function renderDashboard() {
       };
     };
   }
+
+  document.getElementById('change-password-btn').onclick = () => {
+    openModal('Change Password', `
+      <form id="change-password-form" class="space-y-4">
+        <input required name="currentPassword" type="password" placeholder="Current Password" class="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3.5 px-4 text-sm text-slate-900">
+        <input required name="newPassword" type="password" placeholder="New Password" class="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3.5 px-4 text-sm text-slate-900">
+        <button type="submit" class="w-full bg-rose-600 text-white py-4 rounded-2xl font-bold">Update Password</button>
+      </form>
+    `);
+
+    document.getElementById('change-password-form').onsubmit = (e) => {
+      e.preventDefault();
+      const current = e.target.currentPassword.value;
+      const newPass = e.target.newPassword.value;
+
+      if (current !== user.password) {
+        showToast('Incorrect current password', 'error');
+        return;
+      }
+
+      user.password = newPass;
+      saveState();
+      closeModal();
+      showToast('Password updated successfully');
+    };
+  };
 
   const subjectInput = document.getElementById('subject-input');
   if (subjectInput) {
@@ -1208,34 +1257,11 @@ function openDivisionSelection() {
   lucide.createIcons();
 };
 
-function viewStudentDirectory() {
-  const students = state.users.filter(u => u.role === 'Student');
-  const studentListHtml = `
-    <div class="space-y-4 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
-      ${students.map(s => `
-        <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center text-rose-600 font-bold">
-              ${s.name.charAt(0)}
-            </div>
-            <div>
-              <p class="font-bold text-slate-900">${s.name}</p>
-              <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Roll No: ${s.prn}</p>
-            </div>
-          </div>
-          <div class="text-right">
-            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Dept</p>
-            <p class="text-xs font-medium text-slate-700">${s.department}</p>
-          </div>
-        </div>
-      `).join('')}
-    </div>
-  `;
-  openModal('Student Directory', studentListHtml);
-}
-
 function renderAttendancePage(container, t) {
   const user = state.currentUser;
+  if (user.role === 'Teacher' && user.classSubject) {
+    state.currentSubject = user.classSubject;
+  }
   const students = state.users.filter(u => 
     u.role === 'Student' && 
     u.department === user.department &&
@@ -1264,7 +1290,10 @@ function renderAttendancePage(container, t) {
             <button data-div="A" class="div-btn px-4 py-2 rounded-lg text-xs font-bold transition-all ${state.currentDivision === 'A' ? 'bg-rose-600 text-white shadow-lg shadow-rose-500/20' : 'text-slate-400 hover:text-white'}">Class A</button>
             <button data-div="B" class="div-btn px-4 py-2 rounded-lg text-xs font-bold transition-all ${state.currentDivision === 'B' ? 'bg-rose-600 text-white shadow-lg shadow-rose-500/20' : 'text-slate-400 hover:text-white'}">Class B</button>
           </div>
-          <input id="subject-input" type="text" value="${state.currentSubject}" placeholder="Subject Name" class="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/50 text-white w-40">
+          ${user.role === 'Teacher' 
+            ? `<div class="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm font-bold text-white flex items-center gap-2 cursor-default"><i data-lucide="book" size="14"></i> ${state.currentSubject}</div>` 
+            : `<input id="subject-input" type="text" value="${state.currentSubject}" placeholder="Subject Name" class="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/50 text-white w-40">`
+          }
           <button id="dial-pad-btn" class="bg-amber-500 hover:bg-amber-400 px-6 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all text-white shadow-lg shadow-amber-500/20">
             <i data-lucide="keypad" size="16"></i> Dial Pad
           </button>
@@ -1376,10 +1405,12 @@ function renderAttendancePage(container, t) {
   });
 
   const subjectInput = document.getElementById('subject-input');
-  subjectInput.onchange = (e) => {
-    state.currentSubject = e.target.value;
-    render();
-  };
+  if (subjectInput) {
+    subjectInput.onchange = (e) => {
+      state.currentSubject = e.target.value;
+      render();
+    };
+  }
 
   document.getElementById('mark-all-present-btn').onclick = () => {
     students.forEach(s => {
